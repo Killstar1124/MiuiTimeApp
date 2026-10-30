@@ -20,12 +20,40 @@ jobs:
           cp -r temp_repo/JetNews/* .
           rm -rf temp_repo
 
+      # 这里我们要修改一下模板的配置，让它能识别我们的包名
       - name: Inject our code
         run: |
+          # 覆盖主代码
           rm -rf app/src/main/java/com/example/jetnews
           mkdir -p app/src/main/java/com/example/miuitimeapp
           cp -r our_code/app/src/main/java/com/example/miuitimeapp/* app/src/main/java/com/example/miuitimeapp/
           cp our_code/app/src/main/AndroidManifest.xml app/src/main/AndroidManifest.xml
+          
+          # 修改模板的 build.gradle.kts，替换包名并加上正式版签名配置
+          sed -i 's/com.example.jetnews/com.example.miuitimeapp/g' app/build.gradle.kts
+          
+          # 自动生成签名并添加到配置中
+          keytool -genkey -v -keystore release.jks -keyalg RSA -keysize 2048 -validity 10000 -alias key0 -storepass 123456 -keypass 123456 -dname "CN=Android, OU=Android, O=Android, L=Android, ST=Android, C=US"
+          
+          cat << 'EOF' >> app/build.gradle.kts
+
+          android {
+              signingConfigs {
+                  create("release") {
+                      storeFile = file("../release.jks")
+                      storePassword = "123456"
+                      keyAlias = "key0"
+                      keyPassword = "123456"
+                  }
+              }
+              buildTypes {
+                  release {
+                      signingConfig = signingConfigs.getByName("release")
+                      isMinifyEnabled = false
+                  }
+              }
+          }
+          EOF
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -33,32 +61,6 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      # 【核心：自动生成签名文件】
-      - name: Generate Keystore and sign APK
-        run: |
-          # 自动生成一个有效期10000天的签名（密码设为 123456）
-          keytool -genkey -v -keystore my-release-key.jks -keyalg RSA -keysize 2048 -validity 10000 -alias my-alias -storepass 123456 -keypass 123456 -dname "CN=Android, OU=Android, O=Android, L=Android, ST=Android, C=US"
-          
-          # 把签名配置写入到 app/build.gradle.kts 中
-          echo '
-          android {
-              signingConfigs {
-                  create("release") {
-                      storeFile = file("../my-release-key.jks")
-                      storePassword = "123456"
-                      keyAlias = "my-alias"
-                      keyPassword = "123456"
-                  }
-              }
-              buildTypes {
-                  release {
-                      signingConfig = signingConfigs.getByName("release")
-                  }
-              }
-          }
-          ' >> app/build.gradle.kts
-
-      # 【正式版打包命令：assembleRelease】
       - name: Build Release APK
         run: ./gradlew assembleRelease
 
@@ -66,5 +68,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: MiuiTimeApp-Release
-          # 注意：正式包叫 app-release.apk
           path: app/build/outputs/apk/release/app-release.apk
