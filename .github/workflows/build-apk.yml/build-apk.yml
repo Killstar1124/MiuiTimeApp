@@ -14,7 +14,7 @@ jobs:
 
       - name: Download project zip and unzip
         run: |
-          unzip MiuiTimeApp-Android.zip
+          unzip MiuiTimeApp-AndroidStudio.zip
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -24,7 +24,7 @@ jobs:
 
       - name: Build APK
         run: |
-          cd MiuiTimeApp-Android
+          cd MiuiTimeApp-AndroidStudio
           chmod +x gradlew
           ./gradlew assembleDebug
 
@@ -32,4 +32,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: app-debug-apk
-          path: MiuiTimeApp-Android/app/build/outputs/apk/debug/app-debug.apk
+          path: MiuiTimeApp-AndroidStudio/app/build/outputs/apk/debug/app-debug.apk
