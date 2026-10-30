@@ -9,21 +9,38 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      
+      - name: Checkout our code
+        uses: actions/checkout@v4
+        with:
+          path: our_code
+
+      # 1. 去下载一个标准的安卓项目模板
+      - name: Download Android Template
+        run: |
+          git clone --depth 1 https://github.com/android/compose-samples.git temp_repo
+          cp -r temp_repo/JetNews/* .
+          rm -rf temp_repo
+
+      # 2. 把我们写的代码替换到模板里
+      - name: Inject our code
+        run: |
+          rm -rf app/src/main/java/com/example/jetnews
+          mkdir -p app/src/main/java/com/example/miuitimeapp
+          cp -r our_code/app/src/main/java/com/example/miuitimeapp/* app/src/main/java/com/example/miuitimeapp/
+          cp our_code/app/src/main/AndroidManifest.xml app/src/main/AndroidManifest.xml
+
+      # 3. 设置 Java 环境
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      # 这一步直接下载 Gradle 环境，不需要项目里自带 gradlew
-      - name: Setup Gradle
-        uses: gradle/gradle-build-action@v3
-
+      # 4. 开始打包
       - name: Build with Gradle
-        run: gradle assembleDebug
+        run: ./gradlew assembleDebug
 
+      # 5. 提取生成的 APK
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
